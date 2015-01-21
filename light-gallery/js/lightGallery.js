@@ -1,70 +1,52 @@
-/** ==========================================================
-
-* jquery lightGallery.js v1.1.4
-* http://sachinchoolur.github.io/lightGallery/
-* Released under the MIT License - http://opensource.org/licenses/mit-license.html  ---- FREE ----
-
-=========================================================/**/
 ;
-(function($) {
+(function ($) {
     "use strict";
-    $.fn.lightGallery = function(options) {
+    $.fn.lightGallery = function (options) {
         var defaults = {
                 mode: 'slide',
                 useCSS: true,
-                cssEasing: 'ease', //'cubic-bezier(0.25, 0, 0.25, 1)',//
-                easing: 'linear', //'for jquery animation',//
-                speed: 600,
-                addClass: '',
-
-                closable: true,
+                easing: 'ease', //'cubic-bezier(0.25, 0, 0.25, 1)',//
+                speed: 1000,
+                class: '',
+                closable: false,
                 loop: false,
                 auto: false,
                 pause: 4000,
                 escKey: true,
                 controls: true,
                 hideControlOnEnd: false,
-
                 preload: 1, //number of preload slides. will exicute only after the current slide is fully loaded. ex:// you clicked on 4th image and if preload = 1 then 3rd slide and 5th slide will be loaded in the background after the 4th slide is fully loaded.. if preload is 2 then 2nd 3rd 5th 6th slides will be preloaded.. ... ...
                 showAfterLoad: true,
                 selector: null,
                 index: false,
-
+                html: false,
                 lang: {
                     allPhotos: 'All photos'
                 },
                 counter: false,
-
                 exThumbImage: false,
                 thumbnail: true,
-                showThumbByDefault:false,
                 animateThumb: true,
                 currentPagerPosition: 'middle',
-                thumbWidth: 100,
+                thumbWidth: 110,
                 thumbMargin: 5,
-
-
                 mobileSrc: false,
                 mobileSrcMaxWidth: 640,
                 swipeThreshold: 50,
-                enableTouch: true,
-                enableDrag: true,
-
                 vimeoColor: 'CCCCCC',
                 videoAutoplay: true,
-                videoMaxWidth: '855px',
-
+                videoMaxWidth: 855,
                 dynamic: false,
-                dynamicEl: [],
                 //callbacks
-
-                onOpen: function(plugin) {},
-                onSlideBefore: function(plugin) {},
-                onSlideAfter: function(plugin) {},
-                onSlideNext: function(plugin) {},
-                onSlidePrev: function(plugin) {},
-                onBeforeClose: function(plugin) {},
-                onCloseAfter: function(plugin) {}
+                dynamicEl: [],
+                onOpen: function (plugin) {},
+                onSlideBefore: function (plugin) {},
+                onSlideAfter: function (plugin) {},
+                onSlideNext: function (plugin) {},
+                onSlidePrev: function (plugin) {},
+                onBeforeClose: function (plugin) {},
+                onHtmlAppend: function (plugin) {},
+                onCloseAfter: function (plugin) {}
             },
             el = $(this),
             plugin = this,
@@ -78,10 +60,10 @@
             aSpeed = false;
         var settings = $.extend(true, {}, defaults, options);
         var lightGallery = {
-            init: function() {
-                el.each(function() {
+            init: function () {
+                el.each(function () {
                     var $this = $(this);
-                    if (settings.dynamic) {
+                    if (settings.dynamic === true) {
                         $children = settings.dynamicEl;
                         index = 0;
                         prevIndex = index;
@@ -92,7 +74,8 @@
                         } else {
                             $children = $this.children();
                         }
-                        $children.on('click', function(e) {
+                        $children.on('click', function (e) {
+                            $('body').addClass('tw-modal-is-open');
                             if (settings.selector !== null) {
                                 $children = $(settings.selector);
                             } else {
@@ -102,14 +85,21 @@
                             e.stopPropagation();
                             index = $children.index(this);
                             prevIndex = index;
-                            setUp.init(index);
+                            setTimeout(function () {
+                                setUp.init(index);
+                            }, 300);
+                        });
+                        $children.keypress(function (e) {
+                            if (e.which == 13) {
+                                e.preventDefault();
+                            }
                         });
                     }
                 });
             }
         };
         var setUp = {
-            init: function() {
+            init: function () {
                 isActive = true;
                 this.structure();
                 this.getWidth();
@@ -126,60 +116,61 @@
                     this.slide(index);
                     this.animateThumb(index);
                 }
-                if (settings.enableDrag) {
-                    this.touch();
-                };
-                if (settings.enableTouch) {
-                    this.enableTouch();
-                }
-
-                setTimeout(function() {
+                this.touch();
+                this.enableTouch();
+                setTimeout(function () {
                     $gallery.addClass('opacity');
                 }, 50);
             },
-            structure: function() {
-                $('body').append('<div id="lightGallery-outer" class="' + settings.addClass + '"><div id="lightGallery-Gallery"><div id="lightGallery-slider"></div><a id="lightGallery-close" class="close"></a></div></div>').addClass('lightGallery');
-                $galleryCont = $('#lightGallery-outer');
-                $gallery = $('#lightGallery-Gallery');
+            structure: function () {
+                $('body').append('<div id="file-viewer-container" class="' + settings.class + '"><div id="file-viewer"><div id="viewer-items-wrap"><div id="viewer-items"></div></div><a id="viewer-expander"></a><a id="viewer-close" class="close"></a></div></div>').addClass('lightGallery');
+                $galleryCont = $('#file-viewer-container');
+                $gallery = $('#file-viewer');
                 if (settings.showAfterLoad === true) {
                     $gallery.addClass('showAfterLoad');
                 }
-                $slider = $gallery.find('#lightGallery-slider');
+                $slider = $gallery.find('#viewer-items');
                 var slideList = '';
-                if (settings.dynamic) {
+                if (settings.dynamic === true) {
                     for (var i = 0; i < settings.dynamicEl.length; i++) {
-                        slideList += '<div class="lightGallery-slide"></div>';
+                        slideList += '<div class="viewer-item"></div>';
                     }
                 } else {
-                    $children.each(function() {
-                        slideList += '<div class="lightGallery-slide"></div>';
+                    $children.each(function () {
+                        slideList += '<div class="viewer-item"></div>';
                     });
                 }
                 $slider.append(slideList);
-                $slide = $gallery.find('.lightGallery-slide');
+                $slide = $gallery.find('.viewer-item');
             },
-            closeSlide: function() {
+            closeSlide: function () {
                 var $this = this;
                 if (settings.closable) {
-                    $('#lightGallery-outer')
-                        .on('click', function(event) {
-                            if ($(event.target).is('.lightGallery-slide')) {
+                    $('#file-viewer-container')
+                        .on('click', function (event) {
+                            if ($(event.target).is('.viewer-item')) {
                                 plugin.destroy(false);
                             }
                         });
                 }
-                $('#lightGallery-close').bind('click touchend', function() {
+                $('#viewer-close').bind('click touchend', function () {
                     plugin.destroy(false);
                 });
+                $('#viewer-expander').on('click', function () {
+                    var $that = $(this);
+                    setTimeout(function () {
+                        $this.expand($slide.eq(index).find('.object'), false);
+                    }, 10);
+                });
             },
-            getWidth: function() {
-                var resizeWindow = function() {
+            getWidth: function () {
+                var resizeWindow = function () {
                     windowWidth = $(window).width();
                 };
                 $(window).bind('resize.lightGallery', resizeWindow());
             },
-            doCss: function() {
-                var support = function() {
+            doCss: function () {
+                var support = function () {
                     var transition = ['transition', 'MozTransition', 'WebkitTransition', 'OTransition', 'msTransition', 'KhtmlTransition'];
                     var root = document.documentElement;
                     for (var i = 0; i < transition.length; i++) {
@@ -193,22 +184,22 @@
                 }
                 return false;
             },
-            enableTouch: function() {
+            enableTouch: function () {
                 var $this = this;
                 if (isTouch) {
                     var startCoords = {},
                         endCoords = {};
-                    $('body').on('touchstart.lightGallery', function(e) {
+                    $('body').on('touchstart.lightGallery', function (e) {
                         endCoords = e.originalEvent.targetTouches[0];
                         startCoords.pageX = e.originalEvent.targetTouches[0].pageX;
                         startCoords.pageY = e.originalEvent.targetTouches[0].pageY;
                     });
-                    $('body').on('touchmove.lightGallery', function(e) {
+                    $('body').on('touchmove.lightGallery', function (e) {
                         var orig = e.originalEvent;
                         endCoords = orig.targetTouches[0];
                         e.preventDefault();
                     });
-                    $('body').on('touchend.lightGallery', function(e) {
+                    $('body').on('touchend.lightGallery', function (e) {
                         var distance = endCoords.pageX - startCoords.pageX,
                             swipeThreshold = settings.swipeThreshold;
                         if (distance >= swipeThreshold) {
@@ -221,15 +212,15 @@
                     });
                 }
             },
-            touch: function() {
+            touch: function () {
                 var xStart, xEnd;
                 var $this = this;
-                $('.lightGallery').bind('mousedown', function(e) {
+                $('.lightGallery').bind('mousedown', function (e) {
                     e.stopPropagation();
                     e.preventDefault();
                     xStart = e.pageX;
                 });
-                $('.lightGallery').bind('mouseup', function(e) {
+                $('.lightGallery').bind('mouseup', function (e) {
                     e.stopPropagation();
                     e.preventDefault();
                     xEnd = e.pageX;
@@ -240,16 +231,16 @@
                     }
                 });
             },
-            isVideo: function(src, index) {
+            isVideo: function (src, index) {
                 var youtube = src.match(/\/\/(?:www\.)?youtu(?:\.be|be\.com)\/(?:watch\?v=|embed\/)?([a-z0-9_\-]+)/i);
                 var vimeo = src.match(/\/\/(?:www\.)?vimeo.com\/([0-9a-z\-_]+)/i);
                 var iframe = false;
-                if (settings.dynamic) {
-                    if (settings.dynamicEl[index].iframe == 'true') {
+                if (settings.dynamic === true) {
+                    if (settings.dynamicEl[index]['iframe'] == 'true') {
                         iframe = true;
                     }
                 } else {
-                    if ($children.eq(index).attr('data-iframe') == 'true') {
+                    if ($children.eq(index).attr('data-iframe') === 'true') {
                         iframe = true;
                     }
                 }
@@ -257,7 +248,7 @@
                     return true;
                 }
             },
-            loadVideo: function(src, _id) {
+            loadVideo: function (src, _id) {
                 var youtube = src.match(/\/\/(?:www\.)?youtu(?:\.be|be\.com)\/(?:watch\?v=|embed\/)?([a-z0-9_\-]+)/i);
                 var vimeo = src.match(/\/\/(?:www\.)?vimeo.com\/([0-9a-z\-_]+)/i);
                 var video = '';
@@ -279,48 +270,62 @@
                 } else {
                     video = '<iframe class="object" frameborder="0" src="' + src + '"  allowfullscreen="true"></iframe>';
                 }
-                return '<div class="video_cont" style="max-width:' + settings.videoMaxWidth + ' !important;"><div class="video">' + video + '</div></div>';
+                return '<div class="video_cont" style="max-width:' + settings.videoMaxWidth + 'px !important;"><div class="video">' + video + '</div></div>';
             },
-            addHtml: function(index) {
-                var dataSubHtml = null;
-                if (settings.dynamic) {
-                    dataSubHtml = settings.dynamicEl[index]['sub-html'];
-                } else {
-                    dataSubHtml = $children.eq(index).attr('data-sub-html');
-                }
-                if (typeof dataSubHtml !== 'undefined' && dataSubHtml !== null) {
-                    var fL = dataSubHtml.substring(0, 1);
-                    if (fL == '.' || fL == '#') {
-                        dataSubHtml = $(dataSubHtml).html();
+            addHtml: function (index) {
+                if (settings.html === true) {
+                    var dataSubHtml = null;
+                    if (settings.dynamic === true) {
+                        dataSubHtml = settings.dynamicEl[index]['sub-html'];
                     } else {
-                        dataSubHtml = dataSubHtml;
+                        dataSubHtml = $children.eq(index).attr('data-sub-html');
                     }
-                    $slide.eq(index).append(dataSubHtml);
+                    if (typeof dataSubHtml !== 'undefined' && dataSubHtml !== null) {
+                        var fL = dataSubHtml.substring(0, 1);
+                        if (fL == '.' || fL == '#') {
+                            dataSubHtml = $(dataSubHtml).html();
+                        } else {
+                            dataSubHtml = dataSubHtml;
+                        }
+                    }
+                    if (typeof dataSubHtml !== 'undefined' && dataSubHtml !== null) {
+                        $slide.eq(index).append(dataSubHtml);
+                        settings.onHtmlAppend.call(this, plugin);
+                    }
                 }
             },
-            preload: function(index) {
+            preload: function (index) {
                 var newIndex = index;
                 for (var k = 0; k <= settings.preload; k++) {
                     if (k >= $children.length - index) {
                         break;
                     }
-                    this.loadContent(newIndex + k, true);
+                    this.loadContent(newIndex + k, true, false);
                 }
                 for (var h = 0; h <= settings.preload; h++) {
                     if (newIndex - h < 0) {
                         break;
                     }
-                    this.loadContent(newIndex - h, true);
+                    this.loadContent(newIndex - h, true, false);
                 }
             },
-            loadObj: function(r, index) {
+            loadObj: function (r, index, _exp) {
                 var $this = this;
-                $slide.eq(index).find('.object').on('load error', function() {
+                $slide.eq(index).find('.object').on('load error', function () {
                     $slide.eq(index).addClass('complete');
                 });
+                if (_exp === true) {
+                    if (!$slide.eq(index).find('.object').parent().hasClass('complete')) {
+                        $slide.eq(index).find('.object').on('load error', function () {
+                            $this.expand($(this), true);
+                        });
+                    } else {
+                        $this.expand($slide.eq(index).find('.object'), true);
+                    }
+                }
                 if (r === false) {
                     if (!$slide.eq(index).hasClass('complete')) {
-                        $slide.eq(index).find('.object').on('load error', function() {
+                        $slide.eq(index).find('.object').on('load error', function () {
                             $this.preload(index);
                         });
                     } else {
@@ -328,23 +333,22 @@
                     }
                 }
             },
-            loadContent: function(index, rec) {
+            loadContent: function (index, rec, _exp) {
                 var $this = this;
                 var i, j, l = $children.length - index;
                 var src;
-
                 if (settings.preload > $children.length) {
                     settings.preload = $children.length;
                 }
                 if (settings.mobileSrc === true && windowWidth <= settings.mobileSrcMaxWidth) {
-                    if (settings.dynamic) {
-                        src = settings.dynamicEl[index].mobileSrc;
+                    if (settings.dynamic === true) {
+                        src = settings.dynamicEl[index]['mobileSrc'];
                     } else {
                         src = $children.eq(index).attr('data-responsive-src');
                     }
                 } else {
-                    if (settings.dynamic) {
-                        src = settings.dynamicEl[index].src;
+                    if (settings.dynamic === true) {
+                        src = settings.dynamicEl[index]['src'];
                     } else {
                         src = $children.eq(index).attr('data-src');
                     }
@@ -353,41 +357,41 @@
                 if (rec === true) {
                     time = settings.speed + 400;
                 }
-
-
-
-
                 if (typeof src !== 'undefined' && src !== '') {
                     if (!$this.isVideo(src, index)) {
-                        setTimeout(function() {
+                        setTimeout(function () {
                             if (!$slide.eq(index).hasClass('loaded')) {
                                 $slide.eq(index).prepend('<img class="object" src="' + src + '" />');
                                 $this.addHtml(index);
                                 $slide.eq(index).addClass('loaded');
+                                $slide.eq(index).find('.object').on('click', function () {
+                                    var $that = $(this);
+                                    setTimeout(function () {
+                                        $this.expand($that, false);
+                                    }, 10);
+                                });
                             }
-                            $this.loadObj(rec, index);
+                            $this.loadObj(rec, index, _exp);
                         }, time);
                     } else {
-                        setTimeout(function() {
+                        setTimeout(function () {
                             if (!$slide.eq(index).hasClass('loaded')) {
                                 $slide.eq(index).prepend($this.loadVideo(src, index));
                                 $this.addHtml(index);
                                 $slide.eq(index).addClass('loaded');
-
                                 if (settings.auto && settings.videoAutoplay === true) {
                                     clearInterval(interval);
                                 }
                             }
-                            $this.loadObj(rec, index);
+                            $this.loadObj(rec, index, _exp);
                         }, time);
-
                     }
                 } else {
-                     setTimeout(function() {
+                    setTimeout(function () {
                         if (!$slide.eq(index).hasClass('loaded')) {
                             var dataHtml = null;
-                            if (settings.dynamic) {
-                                dataHtml = settings.dynamicEl[index].html;
+                            if (settings.dynamic === true) {
+                                dataHtml = settings.dynamicEl[index]['html'];
                             } else {
                                 dataHtml = $children.eq(index).attr('data-html');
                             }
@@ -400,64 +404,103 @@
                                 }
                             }
                             if (typeof dataHtml !== 'undefined' && dataHtml !== null) {
-                                $slide.eq(index).append('<div class="video_cont" style="max-width:' + settings.videoMaxWidth + ' !important;"><div class="video">'+dataHtml+'</div></div>');
+                                $slide.eq(index).append('<div class="video_cont" style="max-width:' + settings.videoMaxWidth + 'px !important;"><div class="video">' + dataHtml + '</div></div>');
                             }
                             $this.addHtml(index);
                             $slide.eq(index).addClass('loaded complete');
-
                             if (settings.auto && settings.videoAutoplay === true) {
                                 clearInterval(interval);
                             }
                         }
-                        $this.loadObj(rec, index);
+                        $this.loadObj(rec, index, _exp);
                     }, time);
                 }
-
             },
-            counter: function() {
+            expand: function ($el, sl) {
+                if (sl === false) {
+                    $galleryCont.toggleClass('zoomed');
+                }
+                if ($galleryCont.hasClass('zoomed')) {
+                    if (sl === true) {
+                        $slide.find('.object').removeAttr('style');
+                    } else {
+                        $galleryCont.removeClass('thumb-open');
+                    }
+                    $el.css('max-height', 'none');
+                    var height = $el.outerHeight();
+                    $el.css('max-height', height + 'px');
+                    $gallery.css('height', height + 20 + 'px');
+                } else {
+                    if (sl === false) {
+                        $gallery.removeAttr('style');
+                        $slide.find('.object').removeAttr('style');
+                    }
+                }
+            },
+            counter: function () {
                 if (settings.counter === true) {
-                    var slideCount = $("#lightGallery-slider > div").length;
+                    var slideCount = $("#viewer-items > div").length;
                     $gallery.append("<div id='lightGallery_counter'><span id='lightGallery_counter_current'></span> / <span id='lightGallery_counter_all'>" + slideCount + "</span></div>");
                 }
             },
-            buildThumbnail: function() {
+            buildThumbnail: function () {
                 if (settings.thumbnail === true && $children.length > 1) {
-                    var $this = this,
-                        $close = '';
-                    if (!settings.showThumbByDefault) {
-                        $close = '<span class="close ib"><i class="bUi-iCn-rMv-16" aria-hidden="true"></i></span>';
-                    }
-                    $gallery.append('<div class="thumb_cont"><div class="thumb_info">'+$close+'</div><div class="thumb_inner"></div></div>');
-                    $thumb_cont = $gallery.find('.thumb_cont');
-                    $prev.after('<a class="cLthumb"></a>');
+                    var $this = this;
+                    $gallery.append('<div class="thumbnail-container"><div class="thumbnail-header"><span class="close ib"><i class="bUi-iCn-rMv-16" aria-hidden="true"></i></span></div><ul class="thumbnails files grid"></ul></div>');
+                    $thumb_cont = $gallery.find('.thumbnail-container');
+                    $prev.after('<a class="viewer-thumbnails"></a>');
                     $prev.parent().addClass('hasThumb');
-                    $gallery.find('.cLthumb').bind('click touchend', function() {
-                        $gallery.addClass('open');
-                        if ($this.doCss() && settings.mode === 'slide') {
-                            $slide.eq(index).prevAll().removeClass('nextSlide').addClass('prevSlide');
-                            $slide.eq(index).nextAll().removeClass('prevSlide').addClass('nextSlide');
+                    $gallery.find('.viewer-thumbnails').bind('click touchend', function () {
+                        if (!$galleryCont.hasClass('thumb-open')) {
+                            $galleryCont.addClass('thumb-open');
+                            if ($this.doCss() && settings.mode === 'slide') {
+                                $slide.eq(index).prevAll().removeClass('nextSlide').addClass('prevSlide');
+                                $slide.eq(index).nextAll().removeClass('prevSlide').addClass('nextSlide');
+                            }
+                        } else {
+                            $galleryCont.removeClass('thumb-open');
                         }
                     });
-                    $gallery.find('.thumb_cont .close').bind('click touchend', function() {
-                        $gallery.removeClass('open');
+                    $gallery.find('.close').bind('click touchend', function () {
+                        $galleryCont.removeClass('thumb-open');
                     });
-                    var thumbInfo = $gallery.find('.thumb_info');
-                    var $thumb_inner = $gallery.find('.thumb_inner');
+                    var thumbInfo = $gallery.find('.thumbnail-header');
+                    var $thumb_inner = $gallery.find('.thumbnails');
                     var thumbList = '';
                     var thumbImg;
-                    if (settings.dynamic) {
+                    if (settings.dynamic === true) {
                         for (var i = 0; i < settings.dynamicEl.length; i++) {
-                            thumbImg = settings.dynamicEl[i].thumb;
+                            thumbImg = settings.dynamicEl[i]['thumb'];
                             thumbList += '<div class="thumb"><img src="' + thumbImg + '" /></div>';
                         }
                     } else {
-                        $children.each(function() {
-                            if (settings.exThumbImage === false || typeof $(this).attr(settings.exThumbImage) == 'undefined' || $(this).attr(settings.exThumbImage) === null) {
+                        $children.each(function () {
+                            if (settings.exThumbImage === false || typeof $(this).attr(settings.exThumbImage) == 'undefined' || $(this).attr(settings.exThumbImage) == null) {
                                 thumbImg = $(this).find('img').attr('src');
                             } else {
                                 thumbImg = $(this).attr(settings.exThumbImage);
                             }
-                            thumbList += '<div class="thumb"><img src="' + thumbImg + '" /></div>';
+                            thumbList +=
+                                '<li class="thumb">\
+                                    <article class="file-item file_{{file.extension}}">\
+                                        <figure class="file-body">\
+                                            <div class="file-container">\
+                                                <div class="cover">\
+                                                    <span class="thumbnail-wrap">\
+                                                        <span class="thumbnail">\
+                                                            <span class="thumb-default">\
+                                                                <span class="thumb-clip">\
+                                                                    <img src="' + thumbImg + '">\
+                                                                    <span class="vertical-align"></span>\
+                                                                </span>\
+                                                            </span>\
+                                                        </span>\
+                                                    </span>\
+                                                </div>\
+                                            </div>\
+                                        </figure>\
+                                    </article>\
+                                </li>';
                         });
                     }
                     $thumb_inner.append(thumbList);
@@ -468,13 +511,13 @@
                     });
                     if (settings.animateThumb === true) {
                         var width = ($children.length * (settings.thumbWidth + settings.thumbMargin));
-                        $gallery.find('.thumb_inner').css({
+                        $gallery.find('.thumbnails').css({
                             'width': width + 'px',
                             'position': 'relative',
                             'transition-duration': settings.speed + 'ms'
                         });
                     }
-                    $thumb.bind('click touchend', function() {
+                    $thumb.bind('click touchend', function () {
                         usingThumb = true;
                         var index = $(this).index();
                         $thumb.removeClass('active');
@@ -484,24 +527,21 @@
                         clearInterval(interval);
                     });
                     thumbInfo.prepend('<span class="ib count">' + settings.lang.allPhotos + ' (' + $thumb.length + ')</span>');
-                    if (settings.showThumbByDefault) {
-                        $gallery.addClass('open');
-                    }
                 }
             },
-            animateThumb: function(index) {
+            animateThumb: function (index) {
                 if (settings.animateThumb === true) {
-                    var thumb_contW = $gallery.find('.thumb_cont').width();
+                    var thumb_contW = $gallery.find('.thumbnail-container').width();
                     var position;
                     switch (settings.currentPagerPosition) {
-                        case 'left':
-                            position = 0;
-                            break;
-                        case 'middle':
-                            position = (thumb_contW / 2) - (settings.thumbWidth / 2);
-                            break;
-                        case 'right':
-                            position = thumb_contW - settings.thumbWidth;
+                    case 'left':
+                        position = 0;
+                        break;
+                    case 'middle':
+                        position = (thumb_contW / 2) - (settings.thumbWidth / 2);
+                        break;
+                    case 'right':
+                        position = thumb_contW - settings.thumbWidth;
                     }
                     var left = ((settings.thumbWidth + settings.thumbMargin) * index - 1) - position;
                     var width = ($children.length * (settings.thumbWidth + settings.thumbMargin));
@@ -512,34 +552,34 @@
                         left = 0;
                     }
                     if (this.doCss()) {
-                        $gallery.find('.thumb_inner').css('transform', 'translate3d(-' + left + 'px, 0px, 0px)');
+                        $gallery.find('.thumbnails').css('transform', 'translate3d(-' + left + 'px, 0px, 0px)');
                     } else {
-                        $gallery.find('.thumb_inner').animate({
+                        $gallery.find('.thumbnails').animate({
                             left: -left + "px"
                         }, settings.speed);
                     }
                 }
             },
-            slideTo: function() {
+            slideTo: function () {
                 var $this = this;
                 if (settings.controls === true && $children.length > 1) {
-                    $gallery.append('<div id="lightGallery-action"><a id="lightGallery-prev"></a><a id="lightGallery-next"></a></div>');
-                    $prev = $gallery.find('#lightGallery-prev');
-                    $next = $gallery.find('#lightGallery-next');
-                    $prev.bind('click', function() {
+                    $gallery.append('<div id="viewer-controller"><a id="viewer-item-previous"></a><a id="viewer-item-next"></a></div>');
+                    $prev = $gallery.find('#viewer-item-previous');
+                    $next = $gallery.find('#viewer-item-next');
+                    $prev.bind('click', function () {
                         $this.prevSlide();
                         clearInterval(interval);
                     });
-                    $next.bind('click', function() {
+                    $next.bind('click', function () {
                         $this.nextSlide();
                         clearInterval(interval);
                     });
                 }
             },
-            autoStart: function() {
+            autoStart: function () {
                 var $this = this;
                 if (settings.auto === true) {
-                    interval = setInterval(function() {
+                    interval = setInterval(function () {
                         if (index + 1 < $children.length) {
                             index = index;
                         } else {
@@ -550,41 +590,45 @@
                     }, settings.pause);
                 }
             },
-            keyPress: function() {
+            keyPress: function () {
                 var $this = this;
-                $(window).bind('keyup.lightGallery', function(e) {
+                $(window).bind('keyup.lightGallery', function (e) {
                     e.preventDefault();
                     e.stopPropagation();
                     if (e.keyCode === 37) {
                         $this.prevSlide();
                         clearInterval(interval);
                     }
-                    if (e.keyCode === 38 && settings.thumbnail === true && $children.length > 1) {
-                        if (!$gallery.hasClass('open')) {
+                    if (e.keyCode === 40 && settings.thumbnail === true) {
+                        if (!$galleryCont.hasClass('thumb-open')) {
                             if ($this.doCss() && settings.mode === 'slide') {
                                 $slide.eq(index).prevAll().removeClass('nextSlide').addClass('prevSlide');
                                 $slide.eq(index).nextAll().removeClass('prevSlide').addClass('nextSlide');
                             }
-                            $gallery.addClass('open');
+                            $galleryCont.addClass('thumb-open');
                         }
                     } else if (e.keyCode === 39) {
                         $this.nextSlide();
                         clearInterval(interval);
                     }
-                    if (e.keyCode === 40 && settings.thumbnail === true && $children.length > 1 && !settings.showThumbByDefault) {
-                        if ($gallery.hasClass('open')) {
-                            $gallery.removeClass('open');
+                    if (e.keyCode === 38 && settings.thumbnail === true) {
+                        if ($galleryCont.hasClass('thumb-open')) {
+                            $galleryCont.removeClass('thumb-open');
                         }
                     } else if (settings.escKey === true && e.keyCode === 27) {
-                        if (!settings.showThumbByDefault && $gallery.hasClass('open')) {
-                            $gallery.removeClass('open');
+                        if (settings.thumbnail === true && $thumb_cont && $galleryCont.hasClass('thumb-open')) {
+                            $galleryCont.removeClass('thumb-open');
+                        } else if ($galleryCont.hasClass('zoomed')) {
+                            $galleryCont.removeClass('zoomed');
+                            $gallery.removeAttr('style');
+                            $slide.find('.object').removeAttr('style');
                         } else {
                             plugin.destroy(false);
                         }
                     }
                 });
             },
-            nextSlide: function() {
+            nextSlide: function () {
                 var $this = this;
                 index = $slide.index($slide.eq(prevIndex));
                 if (index + 1 < $children.length) {
@@ -594,11 +638,11 @@
                     if (settings.loop) {
                         index = 0;
                         $this.slide(index);
-                    } else if (settings.thumbnail === true && $children.length > 1 && !settings.showThumbByDefault) {
-                        $gallery.addClass('open');
+                    } else if (settings.thumbnail === true && $children.length > 1) {
+                        $galleryCont.addClass('thumb-open');
                     } else {
                         $slide.eq(index).find('.object').addClass('rightEnd');
-                        setTimeout(function() {
+                        setTimeout(function () {
                             $slide.find('.object').removeClass('rightEnd');
                         }, 400);
                     }
@@ -606,7 +650,7 @@
                 $this.animateThumb(index);
                 settings.onSlideNext.call(this, plugin);
             },
-            prevSlide: function() {
+            prevSlide: function () {
                 var $this = this;
                 index = $slide.index($slide.eq(prevIndex));
                 if (index > 0) {
@@ -616,11 +660,11 @@
                     if (settings.loop) {
                         index = $children.length - 1;
                         $this.slide(index);
-                    } else if (settings.thumbnail === true && $children.length > 1 && !settings.showThumbByDefault) {
-                        $gallery.addClass('open');
-                    } else{
+                    } else if (settings.thumbnail === true && $children.length > 1) {
+                        $galleryCont.addClass('thumb-open');
+                    } else {
                         $slide.eq(index).find('.object').addClass('leftEnd');
-                        setTimeout(function() {
+                        setTimeout(function () {
                             $slide.find('.object').removeClass('leftEnd');
                         }, 400);
                     }
@@ -628,12 +672,17 @@
                 $this.animateThumb(index);
                 settings.onSlidePrev.call(this, plugin);
             },
-            slide: function(index) {
+            slide: function (index) {
                 var $this = this;
                 if (lightGalleryOn) {
-                    setTimeout(function() {
-                        $this.loadContent(index, false);
-                    }, settings.speed + 400);
+                    var canExpand = true;
+                    if ($slide.eq(index).hasClass('complete')) {
+                        $this.expand($slide.eq(index).find('.object'), true);
+                        canExpand = false;
+                    }
+                    setTimeout(function () {
+                        $this.loadContent(index, false, canExpand);
+                    }, settings.speed + 10);
                     if (!$slider.hasClass('on')) {
                         $slider.addClass('on');
                     }
@@ -646,21 +695,21 @@
                             aSpeed = true;
                         }
                     }
-                    if (this.doCss() && settings.cssEasing !== '') {
+                    if (this.doCss() && settings.easing !== '') {
                         if (!$slider.hasClass('timing')) {
                             $slider.addClass('timing');
                         }
                         if (aTiming === false) {
-                            $slider.css('transition-timing-function', settings.cssEasing);
+                            $slider.css('transition-timing-function', settings.easing);
                             aTiming = true;
                         }
                     }
                     settings.onSlideBefore.call(this, plugin);
                 } else {
-                    $this.loadContent(index, false);
+                    $this.loadContent(index, false, false);
                 }
                 if (settings.mode === 'slide') {
-                    var isiPad = navigator.userAgent.match(/iPad/i) !== null;
+                    var isiPad = navigator.userAgent.match(/iPad/i) != null;
                     if (this.doCss() && !$slider.hasClass('slide') && !isiPad) {
                         $slider.addClass('slide');
                     } else if (this.doCss() && !$slider.hasClass('useLeft') && isiPad) {
@@ -698,6 +747,7 @@
                 }
                 $slide.eq(prevIndex).removeClass('current');
                 $slide.eq(index).addClass('current');
+                //$this.expand($slide.eq(index).find('.object'),true);
                 if (this.doCss() && settings.mode === 'slide') {
                     if (usingThumb === false) {
                         $('.prevSlide').removeClass('prevSlide');
@@ -728,29 +778,28 @@
                 }
                 prevIndex = index;
                 lightGalleryOn === false ? settings.onOpen.call(this, plugin) : settings.onSlideAfter.call(this, plugin);
-                setTimeout(function() {
+                setTimeout(function () {
                     lightGalleryOn = true;
                 });
                 usingThumb = false;
                 if (settings.counter) {
                     $("#lightGallery_counter_current").text(index + 1);
                 }
-                $(window).bind('resize.lightGallery', function() {
-                    setTimeout(function() {
+                $(window).bind('resize.lightGallery', function () {
+                    setTimeout(function () {
                         $this.animateThumb(index);
                     }, 200);
                 });
             }
         };
-        plugin.isActive = function() {
+        plugin.isActive = function () {
             if (isActive === true) {
                 return true;
             } else {
                 return false;
             }
-
         };
-        plugin.destroy = function(d) {
+        plugin.destroy = function (d) {
             isActive = false;
             d = typeof d !== 'undefined' ? false : true;
             settings.onBeforeClose.call(this, plugin);
@@ -768,7 +817,8 @@
             $(window).off('resize.lightGallery keyup.lightGallery');
             if (lightGalleryOnT === true) {
                 $gallery.addClass('fadeM');
-                setTimeout(function() {
+                $('body').removeClass('tw-modal-is-open');
+                setTimeout(function () {
                     $galleryCont.remove();
                     $('body').removeClass('lightGallery');
                 }, 500);
